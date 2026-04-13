@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Préstamo · Sistema Francés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   VARIABLES & RESET
+   ========================================================= */
+:root {
+  --navy:    #0b1623;
+  --navy2:   #132032;
+  --navy3:   #1d2f47;
+  --blue:    #1a6aff;
+  --blue-l:  #3d84ff;
+  --cyan:    #00d4aa;
+  --cyan-d:  #00a882;
+  --gold:    #f5c842;
+  --white:   #f0f4fa;
+  --white2:  #d6e0f0;
+  --muted:   #7a90b0;
+  --card:    rgba(255,255,255,0.04);
+  --card2:   rgba(255,255,255,0.07);
+  --border:  rgba(255,255,255,0.09);
+  --border2: rgba(255,255,255,0.15);
+  --ff-head: 'Playfair Display', serif;
+  --ff-body: 'Outfit', sans-serif;
+  --ff-mono: 'JetBrains Mono', monospace;
+  --ease:    cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;scroll-behavior:smooth;}
+body{
+  font-family:var(--ff-body);
+  background:var(--navy);
+  color:var(--white);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* =========================================================
+   FONDO ANIMADO
+   ========================================================= */
+.bg{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(26,106,255,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 80%, rgba(0,212,170,0.12) 0%, transparent 55%),
+    var(--navy);
+}
+.bg-dots{
+  position:fixed;inset:0;z-index:0;
+  background-image:radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size:28px 28px;
+}
+.bg-line{
+  position:fixed;top:0;left:50%;width:1px;height:100%;z-index:0;
+  background:linear-gradient(to bottom, transparent, rgba(26,106,255,0.15) 30%, rgba(0,212,170,0.1) 70%, transparent);
+}
+
+/* =========================================================
+   PANTALLAS
+   ========================================================= */
+.screen{
+  position:relative;width:100%;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;
+  transition:opacity .55s var(--ease), transform .55s var(--ease);
+}
+.screen.hidden{
+  opacity:0;pointer-events:none;transform:translateY(24px);
+}
+.screen.out{
+  opacity:0;pointer-events:none;transform:translateY(-24px);
+}
+
+/* =========================================================
+   PANTALLA 1 — INICIO
+   ========================================================= */
+#s1{text-align:center;}
+
+.badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;border-radius:999px;
+  background:rgba(26,106,255,0.15);
+  border:1px solid rgba(26,106,255,0.35);
+  font-family:var(--ff-mono);font-size:11px;letter-spacing:.1em;
+  color:rgba(160,195,255,0.9);text-transform:uppercase;
+  margin-bottom:36px;
+  animation:fadeUp .8s var(--ease) both;
+}
+.badge::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--cyan);box-shadow:0 0 8px var(--cyan);
+  animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.s1-title{
+  font-family:var(--ff-head);
+  font-size:clamp(2.8rem,7vw,5.5rem);
+  font-weight:900;line-height:1.0;
+  letter-spacing:-.03em;
+  animation:fadeUp .8s .15s var(--ease) both;
+}
+.s1-title .line1{display:block;color:var(--white);}
+.s1-title .line2{
+  display:block;
+  background:linear-gradient(135deg, var(--blue-l), var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+.s1-desc{
+  margin:28px auto 48px;max-width:440px;
+  font-size:1.05rem;line-height:1.7;color:var(--muted);
+  font-weight:300;
+  animation:fadeUp .8s .3s var(--ease) both;
+}
+.s1-desc strong{color:var(--white2);font-weight:500;}
+
+.btn-enter{
+  display:inline-flex;align-items:center;gap:12px;
+  padding:16px 40px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg, var(--blue), var(--blue-l));
+  color:#fff;font-family:var(--ff-body);font-size:1rem;font-weight:600;
+  letter-spacing:.02em;
+  box-shadow:0 8px 32px rgba(26,106,255,0.4);
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease);
+  animation:fadeUp .8s .45s var(--ease) both;
+}
+.btn-enter:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(26,106,255,0.55);}
+.btn-enter:active{transform:translateY(0);}
+.btn-enter .arrow{font-size:1.2rem;transition:transform .2s;}
+.btn-enter:hover .arrow{transform:translateX(5px);}
+
+.s1-footer{
+  position:absolute;bottom:28px;
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.1em;
+  color:rgba(122,144,176,0.5);text-transform:uppercase;
+  animation:fadeUp .8s .6s var(--ease) both;
+}
+
+/* =========================================================
+   PANTALLA 2 — FORMULARIO
+   ========================================================= */
+#s2 {
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 32px 24px 40px;
+  inset: 0;
+  position: fixed;
+}
+.s2-inner{
+  width:100%;max-width:680px;margin:0 auto;
+}
+
+.screen-header{
+  display:flex;align-items:center;gap:16px;margin-bottom:36px;
+}
+.step-pill{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  font-family:var(--ff-mono);font-size:13px;font-weight:600;
+  color:#fff;flex-shrink:0;
+}
+.screen-header-text{}
+.screen-tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:2px;
+}
+.screen-title{
+  font-family:var(--ff-head);font-size:1.7rem;font-weight:700;
+  letter-spacing:-.02em;color:var(--white);
+}
+
+/* Tarjeta */
+.card{
+  background:var(--card2);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:28px;
+  margin-bottom:20px;
+  backdrop-filter:blur(12px);
+}
+.card-title{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:20px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Campos */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
+.field:last-child{margin-bottom:0;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+
+label.lbl{
+  font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.sublbl{font-size:11px;color:rgba(122,144,176,0.6);font-family:var(--ff-mono);}
+
+.inp-wrap{position:relative;display:flex;align-items:center;}
+input[type=number], select{
+  width:100%;padding:12px 44px 12px 14px;
+  background:rgba(255,255,255,0.05);
+  border:1.5px solid var(--border2);border-radius:10px;
+  color:var(--white);font-family:var(--ff-mono);font-size:14px;
+  transition:border-color .2s,box-shadow .2s;
+  appearance:textfield;-moz-appearance:textfield;
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+input[type=number]:focus, select:focus{
+  outline:none;
+  border-color:var(--blue-l);
+  box-shadow:0 0 0 3px rgba(26,106,255,0.2);
+  background:rgba(255,255,255,0.08);
+}
+input::placeholder{color:rgba(122,144,176,0.5);}
+.unit{
+  position:absolute;right:13px;
+  font-family:var(--ff-mono);font-size:12px;color:var(--muted);
+  pointer-events:none;
+}
+select{
+  padding:12px 40px 12px 14px;cursor:pointer;
+  background:rgba(255,255,255,0.05);
+}
+select option{background:var(--navy2);color:var(--white);}
+.sel-wrap{position:relative;}
+.sel-arr{
+  position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  font-size:11px;color:var(--muted);pointer-events:none;
+}
+
+/* Radio tipo interés */
+.radio-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.radio-card{cursor:pointer;display:block;}
+.radio-card input{display:none;}
+.radio-inner{
+  padding:14px 16px;border-radius:10px;
+  border:1.5px solid var(--border2);
+  background:rgba(255,255,255,0.03);
+  transition:all .2s;
+}
+.radio-card input:checked + .radio-inner{
+  border-color:var(--cyan);
+  background:rgba(0,212,170,0.08);
+  box-shadow:0 0 0 3px rgba(0,212,170,0.12);
+}
+.r-title{font-size:14px;font-weight:600;color:var(--white);margin-bottom:3px;}
+.r-sub{font-family:var(--ff-mono);font-size:11px;color:var(--muted);}
+.radio-card input:checked + .radio-inner .r-title{color:var(--cyan);}
+.radio-card input:checked + .radio-inner .r-sub{color:rgba(0,212,170,0.7);}
+
+/* Tarjeta gastos fijos */
+.gastos-card{
+  background:linear-gradient(135deg, rgba(245,200,66,0.08), rgba(245,200,66,0.03));
+  border:1.5px solid rgba(245,200,66,0.25);
+  border-radius:14px;padding:20px 22px;margin-bottom:20px;
+}
+.gastos-card-title{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:16px;
+}
+.gastos-card-title .icon{font-size:14px;}
+.gasto-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid rgba(245,200,66,0.1);
+}
+.gasto-row:last-child{border-bottom:none;padding-bottom:0;}
+.g-name{font-size:13px;color:var(--white2);}
+.g-val{
+  font-family:var(--ff-mono);font-size:13px;font-weight:500;
+  color:var(--gold);
+  background:rgba(245,200,66,0.12);
+  padding:3px 10px;border-radius:6px;
+}
+
+/* Botón calcular */
+.btn-calc{
+  width:100%;padding:15px;border:none;border-radius:12px;cursor:pointer;
+  background:linear-gradient(135deg,var(--cyan-d),var(--cyan));
+  color:var(--navy);font-family:var(--ff-body);font-size:1rem;font-weight:700;
+  letter-spacing:.02em;
+  box-shadow:0 8px 28px rgba(0,212,170,0.35);
+  transition:transform .2s,box-shadow .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.btn-calc:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,212,170,0.5);}
+.btn-calc:active{transform:translateY(0);}
+
+.error-box{
+  margin-top:14px;padding:12px 16px;
+  border-radius:10px;border:1px solid rgba(255,100,100,0.3);
+  background:rgba(255,100,100,0.08);
+  color:#ff9090;font-size:13px;line-height:1.6;
+  display:none;
+}
+
+/* =========================================================
+   PANTALLA 3 — RESULTADOS
+   ========================================================= */
+#s3 { overflow-y: auto; align-items: flex-start; justify-content: flex-start; padding: 32px 24px 40px; inset: 0; position: fixed; }
+.s3-inner{width:100%;max-width:900px;margin:0 auto;}
+
+/* Hipótesis */
+.hipotesis{
+  background:rgba(26,106,255,0.08);
+  border:1px solid rgba(26,106,255,0.25);
+  border-left:3px solid var(--blue-l);
+  border-radius:0 10px 10px 0;
+  padding:14px 18px;margin-bottom:24px;
+  font-family:var(--ff-mono);font-size:12px;line-height:2;
+  color:var(--muted);
+}
+.hipotesis strong{color:var(--white2);}
+
+/* KPI Grid */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;margin-bottom:28px;
+}
+@media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr;}}
+.kpi{
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:14px;padding:18px 16px;
+  transition:transform .2s;
+}
+.kpi:hover{transform:translateY(-3px);}
+.kpi.tae{
+  background:linear-gradient(135deg,rgba(0,212,170,0.1),rgba(0,212,170,0.04));
+  border-color:rgba(0,212,170,0.3);
+}
+.kpi-lbl{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:10px;
+}
+.kpi.tae .kpi-lbl{color:rgba(0,212,170,0.7);}
+.kpi-val{
+  font-family:var(--ff-head);font-size:1.6rem;font-weight:700;
+  letter-spacing:-.02em;color:var(--white);line-height:1;
+}
+.kpi.tae .kpi-val{color:var(--cyan);}
+.kpi-unit{
+  font-family:var(--ff-mono);font-size:11px;color:var(--muted);margin-top:4px;
+}
+
+/* Tabla */
+.tabla-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+}
+.tabla-note{
+  font-family:var(--ff-mono);font-size:11px;color:var(--muted);
+  letter-spacing:.04em;
+}
+.tabla-wrap{
+  border-radius:12px;border:1px solid var(--border2);
+  overflow:hidden;max-height:420px;overflow-y:auto;
+  margin-bottom:28px;
+}
+.tabla-wrap::-webkit-scrollbar{width:5px;}
+.tabla-wrap::-webkit-scrollbar-track{background:transparent;}
+.tabla-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--navy3);position:sticky;top:0;z-index:2;}
+thead th{
+  padding:12px 16px;text-align:right;
+  font-family:var(--ff-mono);font-size:10px;font-weight:500;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  white-space:nowrap;
+}
+thead th:first-child{text-align:center;}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background .15s;}
+tbody tr:hover{background:rgba(26,106,255,0.08);}
+tbody tr:last-child{border-bottom:none;}
+tbody td{
+  padding:10px 16px;font-family:var(--ff-mono);font-size:12px;
+  text-align:right;color:var(--white2);
+}
+tbody td:first-child{text-align:center;color:var(--muted);font-size:11px;}
+
+/* Botones resultado */
+.res-btns{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-print{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 22px;border-radius:10px;cursor:pointer;
+  background:rgba(255,255,255,0.05);border:1.5px solid var(--border2);
+  color:var(--white2);font-family:var(--ff-body);font-size:13px;font-weight:500;
+  transition:all .2s;
+}
+.btn-print:hover{background:rgba(255,255,255,0.1);border-color:var(--white2);}
+
+.btn-volver{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 22px;border-radius:10px;cursor:pointer;
+  background:rgba(255,80,80,0.08);border:1.5px solid rgba(255,80,80,0.25);
+  color:#ff9090;font-family:var(--ff-body);font-size:13px;font-weight:500;
+  transition:all .2s;
+}
+.btn-volver:hover{background:rgba(255,80,80,0.15);border-color:rgba(255,80,80,0.5);}
+
+/* =========================================================
+   ANIMACIONES
+   ========================================================= */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(18px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* =========================================================
+   PRINT
+   ========================================================= */
+@media print{
+  .bg,.bg-dots,.bg-line,#s1,#s2,.res-btns{display:none!important;}
+  body{background:#fff;color:#000;}
+  #s3{position:static;overflow:visible;padding:20px;}
+  .card,.kpi,.gastos-card,.hipotesis{border-color:#ccc;background:#f9f9f9;color:#000;}
+  .kpi-val,.s3-inner *{color:#000!important;}
+  .tabla-wrap{max-height:none;overflow:visible;}
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media(max-width:500px){
+  .field-row{grid-template-columns:1fr;}
+  .radio-grid{grid-template-columns:1fr;}
+  .screen-title{font-size:1.4rem;}
+}
+</style>
+</head>
+<body>
+
+<!-- Fondos -->
+<div class="bg"></div>
+<div class="bg-dots"></div>
+<div class="bg-line"></div>
+
+<!-- =====================================================
+     PANTALLA 1 · INICIO
+     ===================================================== -->
+<div class="screen" id="s1">
+
+  <div class="badge">AVPI · Trabajo 1 · 2025-26</div>
+
+  <h1 class="s1-title">
+    <span class="line1">Bienvenido al</span>
+    <span class="line2">Simulador de<br>Préstamos</span>
+  </h1>
+
+  <p class="s1-desc">
+    Calcula tu financiación con el <strong>sistema de amortización francés</strong>.
+    Obtén el cuadro completo, el tipo nominal y el coste efectivo real de tu operación.
+  </p>
+
+  <button class="btn-enter" onclick="goTo(1,2)">
+    Comenzar simulación
+    <span class="arrow">→</span>
+  </button>
+
+  <div class="s1-footer">Análisis y Valoración de Proyectos de Inversión · 2025-26</div>
+
+</div>
+
+
+<!-- =====================================================
+     PANTALLA 2 · FORMULARIO
+     ===================================================== -->
+<div class="screen hidden" id="s2">
+<div class="s2-inner">
+
+  <div class="screen-header">
+    <div class="step-pill">2</div>
+    <div class="screen-header-text">
+      <div class="screen-tag">Paso 1 de 2</div>
+      <div class="screen-title">Datos del préstamo</div>
+    </div>
+  </div>
+
+  <!-- Capital y plazo -->
+  <div class="card">
+    <div class="card-title">Características del préstamo</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="lbl">Capital nominal</label>
+        <div class="inp-wrap">
+          <input type="number" id="capital" min="100000" max="200000" placeholder="150000">
+          <span class="unit">€</span>
+        </div>
+        <span class="sublbl">Entre 100.000 € y 200.000 €</span>
+      </div>
+      <div class="field">
+        <label class="lbl">Duración</label>
+        <div class="inp-wrap">
+          <input type="number" id="duracion" min="1" max="30" placeholder="20">
+          <span class="unit">años</span>
+        </div>
+        <span class="sublbl">Máximo 30 años</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Periodicidad de los términos</label>
+      <div class="sel-wrap">
+        <select id="periodicidad">
+          <option value="12">Mensual (12 pagos/año)</option>
+          <option value="4">Trimestral (4 pagos/año)</option>
+          <option value="2">Semestral (2 pagos/año)</option>
+          <option value="1">Anual (1 pago/año)</option>
+        </select>
+        <span class="sel-arr">▾</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tipo de interés -->
+  <div class="card">
+    <div class="card-title">Tipo de interés</div>
+
+    <div class="field" style="margin-bottom:16px;">
+      <div class="radio-grid">
+        <label class="radio-card">
+          <input type="radio" name="tipo" value="fijo" checked>
+          <div class="radio-inner">
+            <div class="r-title">Fijo</div>
+            <div class="r-sub">Euribor + 1,00%</div>
+          </div>
+        </label>
+        <label class="radio-card">
+          <input type="radio" name="tipo" value="variable">
+          <div class="radio-inner">
+            <div class="r-title">Variable</div>
+            <div class="r-sub">Euribor + 0,50%</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="lbl">Euribor a 12 meses <span id="mesLabel" style="color:var(--cyan);font-size:10px;"></span></label>
+        <div class="inp-wrap">
+          <input type="number" id="euribor" step="0.001" placeholder="2.500">
+          <span class="unit">%</span>
+        </div>
+        <span class="sublbl">Vigente del mes en curso</span>
+      </div>
+      <div class="field">
+        <label class="lbl">Bonificación por productos</label>
+        <div class="inp-wrap">
+          <input type="number" id="bonif" step="0.01" min="0.10" max="0.25" placeholder="0.10">
+          <span class="unit">%</span>
+        </div>
+        <span class="sublbl">Entre 0,10% y 0,25% (opcional)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gastos fijos destacados -->
+  <div class="gastos-card">
+    <div class="gastos-card-title">
+      <span class="icon">⚠</span>
+      Gastos fijos de la operación
+    </div>
+    <div class="gasto-row">
+      <span class="g-name">Gastos de estudio (coste único inicial)</span>
+      <span class="g-val">150,00 €</span>
+    </div>
+    <div class="gasto-row">
+      <span class="g-name">Gastos de administración por término</span>
+      <span class="g-val">1 ‰ cuota</span>
+    </div>
+    <div class="gasto-row" style="margin-top:8px;padding-top:12px;border-top:1px dashed rgba(245,200,66,0.2);border-bottom:none;">
+      <span class="g-name" style="font-size:11px;color:var(--muted);">Estos gastos se incluyen en el cálculo del coste efectivo (TAE)</span>
+    </div>
+  </div>
+
+  <button class="btn-calc" onclick="calcular()">
+    <span>⚡</span> Calcular simulación
+  </button>
+
+  <div class="error-box" id="errorBox"></div>
+
+</div>
+</div>
+
+
+<!-- =====================================================
+     PANTALLA 3 · RESULTADOS
+     ===================================================== -->
+<div class="screen hidden" id="s3">
+<div class="s3-inner">
+
+  <div class="screen-header">
+    <div class="step-pill" style="background:linear-gradient(135deg,var(--cyan-d),var(--cyan));color:var(--navy);">3</div>
+    <div class="screen-header-text">
+      <div class="screen-tag" style="color:var(--cyan);">Paso 2 de 2</div>
+      <div class="screen-title">Resultados de la simulación</div>
+    </div>
+  </div>
+
+  <!-- Hipótesis -->
+  <div class="hipotesis" id="hipBox"></div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-lbl">Cuota periódica</div>
+      <div class="kpi-val" id="rCuota">--</div>
+      <div class="kpi-unit">€</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Tipo nominal (TIN)</div>
+      <div class="kpi-val" id="rTin">--</div>
+      <div class="kpi-unit">% anual</div>
+    </div>
+    <div class="kpi tae">
+      <div class="kpi-lbl">Coste efectivo (TAE)</div>
+      <div class="kpi-val" id="rTae">--</div>
+      <div class="kpi-unit">% anual</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Total intereses</div>
+      <div class="kpi-val" id="rIntereses">--</div>
+      <div class="kpi-unit">€</div>
+    </div>
+  </div>
+
+  <!-- Cuadro amortización -->
+  <div class="tabla-header">
+    <div class="screen-tag" style="color:var(--muted);font-family:var(--ff-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;">
+      Cuadro de amortización · Sistema francés
+    </div>
+    <div class="tabla-note">Sin comisiones ni gastos</div>
+  </div>
+
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Período</th>
+          <th>Cuota (€)</th>
+          <th>Intereses (€)</th>
+          <th>Amortización (€)</th>
+          <th>Capital pendiente (€)</th>
+        </tr>
+      </thead>
+      <tbody id="tablaBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Botones -->
+  <div class="res-btns">
+    <button class="btn-print" onclick="window.print()">⬇ Exportar / Imprimir PDF</button>
+    <button class="btn-volver" onclick="volver()">✕ Cerrar y volver al inicio</button>
+  </div>
+
+</div>
+</div>
+
+
+<!-- =====================================================
+     JAVASCRIPT
+     ===================================================== -->
+<script>
+/* ---- NAVEGACIÓN ---- */
+function goTo(from, to) {
+  const src = document.getElementById('s' + from);
+  const dst = document.getElementById('s' + to);
+  src.classList.add('out');
+  setTimeout(() => {
+    src.classList.add('hidden');
+    src.classList.remove('out');
+    dst.classList.remove('hidden');
+    dst.scrollTop = 0;
+  }, 500);
+}
+
+function volver() {
+  const s3 = document.getElementById('s3');
+  const s1 = document.getElementById('s1');
+  s3.classList.add('out');
+  setTimeout(() => {
+    s3.classList.add('hidden');
+    s3.classList.remove('out');
+    s1.classList.remove('hidden');
+  }, 500);
+}
+
+/* ---- MES ACTUAL ---- */
+(function() {
+  const meses = ['enero','febrero','marzo','abril','mayo','junio',
+                 'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const now = new Date();
+  const el = document.getElementById('mesLabel');
+  if (el) el.textContent = '(' + meses[now.getMonth()] + ' ' + now.getFullYear() + ')';
+})();
+
+/* ---- UTILIDADES ---- */
+function fmt(n) {
+  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtP(n) {
+  return n.toLocaleString('es-ES', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+
+/* ---- CÁLCULOS FINANCIEROS ---- */
+
+/** Cuota periódica sistema francés */
+function cuotaFrancesa(C, i, n) {
+  if (i === 0) return C / n;
+  return C * i / (1 - Math.pow(1 + i, -n));
+}
+
+/** Cuadro de amortización completo */
+function cuadroAmortizacion(C, i, n) {
+  const alpha = cuotaFrancesa(C, i, n);
+  const filas = [];
+  let pendiente = C;
+  for (let k = 1; k <= n; k++) {
+    const intereses    = pendiente * i;
+    const amortizacion = alpha - intereses;
+    pendiente         -= amortizacion;
+    if (k === n) pendiente = 0;
+    filas.push({ periodo: k, cuota: alpha, intereses, amortizacion, pendiente: Math.max(0, pendiente) });
+  }
+  return filas;
+}
+
+/**
+ * Coste efectivo (TAE) con gastos por Newton-Raphson.
+ * Ecuación: C_neto = Σ (cuota + gasto_adm) / (1+r)^k
+ * r = tipo efectivo periódico → TAE = (1+r)^m - 1
+ */
+function costeEfectivo(C_neto, cuota, gastoAdm, n, m) {
+  const flujo = cuota + gastoAdm;
+  let r = 0.004;
+  for (let it = 0; it < 300; it++) {
+    let f = 0, df = 0;
+    for (let k = 1; k <= n; k++) {
+      const v = Math.pow(1 + r, k);
+      f  += flujo / v;
+      df -= k * flujo / (v * (1 + r));
+    }
+    const delta = (C_neto - f) / (-df);
+    r -= delta;
+    if (Math.abs(delta) < 1e-12) break;
+  }
+  return (Math.pow(1 + r, m) - 1) * 100;
+}
+
+/* ---- CALCULAR ---- */
+function calcular() {
+  const errBox = document.getElementById('errorBox');
+  errBox.style.display = 'none';
+
+  const capital  = parseFloat(document.getElementById('capital').value);
+  const duracion = parseInt(document.getElementById('duracion').value, 10);
+  const m        = parseInt(document.getElementById('periodicidad').value, 10);
+  const tipo     = document.querySelector('input[name="tipo"]:checked').value;
+  const euribor  = parseFloat(document.getElementById('euribor').value);
+  const bonif    = parseFloat(document.getElementById('bonif').value) || 0;
+
+  /* Validaciones */
+  const err = [];
+  if (isNaN(capital) || capital < 100000 || capital > 200000)
+    err.push('El capital debe estar entre 100.000 € y 200.000 €.');
+  if (isNaN(duracion) || duracion < 1 || duracion > 30)
+    err.push('La duración debe estar entre 1 y 30 años.');
+  if (isNaN(euribor) || euribor < 0)
+    err.push('Introduce un Euribor válido (valor mayor o igual a 0).');
+  if (bonif !== 0 && (bonif < 0.10 || bonif > 0.25))
+    err.push('La bonificación debe estar entre 0,10% y 0,25%.');
+
+  if (err.length) {
+    errBox.innerHTML = '⚠ ' + err.join('<br>⚠ ');
+    errBox.style.display = 'block';
+    return;
+  }
+
+  /* Tipo nominal anual */
+  const difer   = tipo === 'fijo' ? 1.00 : 0.50;
+  const tinAnual = euribor + difer - bonif;         // % anual
+  const tinPer   = tinAnual / 100 / m;              // tipo periódico decimal
+
+  /* Nº períodos */
+  const n = duracion * m;
+
+  /* Cuota */
+  const cuota = cuotaFrancesa(capital, tinPer, n);
+
+  /* Gastos */
+  const gastoEstudio = 150;
+  const gastoAdm     = cuota * 0.001;              // 1‰ por término
+  const capitalNeto  = capital - gastoEstudio;
+
+  /* TAE */
+  const tae = costeEfectivo(capitalNeto, cuota, gastoAdm, n, m);
+
+  /* Cuadro */
+  const tabla = cuadroAmortizacion(capital, tinPer, n);
+  const totalIntereses = tabla.reduce((s, f) => s + f.intereses, 0);
+
+  /* Nombres legibles */
+  const nomPer  = { 12:'mensual', 4:'trimestral', 2:'semestral', 1:'anual' }[m];
+  const nomTipo = tipo === 'fijo' ? 'Fijo' : 'Variable';
+
+  /* ---- Volcar resultados ---- */
+  document.getElementById('rCuota').textContent     = fmt(cuota);
+  document.getElementById('rTin').textContent       = fmtP(tinAnual);
+  document.getElementById('rTae').textContent       = fmtP(tae);
+  document.getElementById('rIntereses').textContent = fmt(totalIntereses);
+
+  /* Hipótesis */
+  document.getElementById('hipBox').innerHTML =
+    `Capital: <strong>${fmt(capital)} €</strong> &nbsp;·&nbsp; ` +
+    `Duración: <strong>${duracion} años</strong> &nbsp;·&nbsp; ` +
+    `Periodicidad: <strong>${nomPer}</strong> &nbsp;·&nbsp; ` +
+    `Tipo: <strong>${nomTipo}</strong><br>` +
+    `Euribor: <strong>${fmtP(euribor)}%</strong> &nbsp;·&nbsp; ` +
+    `Diferencial: <strong>+${difer.toFixed(2)}%</strong> &nbsp;·&nbsp; ` +
+    `Bonificación: <strong>−${bonif.toFixed(2)}%</strong> &nbsp;·&nbsp; ` +
+    `TIN: <strong>${fmtP(tinAnual)}%</strong><br>` +
+    `Gastos estudio: <strong>150,00 €</strong> &nbsp;·&nbsp; ` +
+    `Gastos adm.: <strong>${fmt(gastoAdm)} €/período</strong>`;
+
+  /* Tabla */
+  const tbody = document.getElementById('tablaBody');
+  tbody.innerHTML = '';
+  tabla.forEach(function(f) {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${f.periodo}</td>` +
+      `<td>${fmt(f.cuota)}</td>` +
+      `<td>${fmt(f.intereses)}</td>` +
+      `<td>${fmt(f.amortizacion)}</td>` +
+      `<td>${fmt(f.pendiente)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  /* Navegar a pantalla 3 */
+  goTo(2, 3);
+}
+</script>
+</body>
+</html>
